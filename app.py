@@ -2,6 +2,7 @@ import subprocess
 import os
 import math
 from openai import OpenAI
+import datetime
 
 
 # Load .env file
@@ -11,9 +12,35 @@ load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-RESET_TRASNSCRIPTION = False
-RESET_EXTRACT_AUDIO = False
+RESET_TRASNSCRIPTION = True
+RESET_EXTRACT_AUDIO = True
+RESET_SUMMARY = True
 OUTPUT_FOLDER = os.getenv("OUTPUT_FOLDER")
+ARCHIVE_FOLDER = os.getenv("ARCHIVE_FOLDER")
+
+# If Reset Extract audio is true, delete the audio file and all chunks if they exist
+if RESET_EXTRACT_AUDIO:
+    if os.path.exists("audio.wav"):
+        os.remove("audio.wav")
+    for f in os.listdir("."):
+        if f.startswith("chunk_"):
+            os.remove(f)
+
+# If reset transcription is true, move the transcription file to the archive folder if it exists. Create folder if it doesn't exist
+if RESET_TRASNSCRIPTION:
+    if os.path.exists("transcription.txt"):
+        if not os.path.exists(ARCHIVE_FOLDER):
+            os.mkdir(ARCHIVE_FOLDER)
+        # Archive the transcription file and append a timestamp to the file name
+        os.rename("transcription.txt", os.path.join(ARCHIVE_FOLDER, f"transcription_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"))
+
+# If reset summary is true, move the summary file to the archive folder if it exists. Create folder if it doesn't exist
+if RESET_SUMMARY:
+    if os.path.exists("summary.txt"):
+        if not os.path.exists(ARCHIVE_FOLDER):
+            os.mkdir(ARCHIVE_FOLDER)
+        # Archive the summary file and append a timestamp to the file name
+        os.rename("summary.txt", os.path.join(ARCHIVE_FOLDER, f"summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"))
 
 
 # Function to extract audio from video using ffmpeg
@@ -41,7 +68,7 @@ def summarize_text(text):
     print("Summarizing text...")
     response = client.chat.completions.create(
         model="gpt-3.5-turbo-1106",
-        messages=[{"role": "system", "content": "You are a professional blogger and author. You are to create a very detailed summary of the conversation and must include names, people, places , tools, organisations and any important sound bytes. The final piece should be in markdown format and have headings, sub headings, conclusio, sentiment  and finally next steps."}, 
+        messages=[{"role": "system", "content": "You are a professional blogger and author. For long conversations You are to create a very detailed summary that is at least 2 pages long of the conversation and must include names, people, places , tools, organisations and any important sound bytes. The final piece should be in markdown format and have headings, sub headings, conclusio, sentiment  and finally next steps. Here is a detailed format ##Introduction ##Topics ##Key Points ##Conclusion  ##Sentiment ##All Questions Asked ##Next Steps"}, 
                   {"role": "user", "content": text}],
     )
     return response.choices[0].message.content
