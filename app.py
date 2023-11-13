@@ -11,7 +11,7 @@ load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-RESET_TRASNSCRIPTION = True
+RESET_TRASNSCRIPTION = False
 RESET_EXTRACT_AUDIO = False
 OUTPUT_FOLDER = os.getenv("OUTPUT_FOLDER")
 
@@ -41,7 +41,7 @@ def summarize_text(text):
     print("Summarizing text...")
     response = client.chat.completions.create(
         model="gpt-3.5-turbo-1106",
-        messages=[{"role": "system", "content": "Summarize the following conversation and return the summary as a blog in markdown:"}, 
+        messages=[{"role": "system", "content": "You are a professional blogger and author. You are to create a very detailed summary of the conversation and must include names, people, places , tools, organisations and any important sound bytes. The final piece should be in markdown format and have headings, sub headings, conclusio, sentiment  and finally next steps."}, 
                   {"role": "user", "content": text}],
     )
     return response.choices[0].message.content
