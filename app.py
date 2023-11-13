@@ -1,9 +1,8 @@
-import subprocess
 import os
+import subprocess
 import math
 from openai import OpenAI
-import datetime
-
+from datetime import datetime
 
 # Load .env file
 from dotenv import load_dotenv
@@ -12,51 +11,52 @@ load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-RESET_TRASNSCRIPTION = True
-RESET_EXTRACT_AUDIO = True
-RESET_SUMMARY = True
-OUTPUT_FOLDER = os.getenv("OUTPUT_FOLDER")
-ARCHIVE_FOLDER = os.getenv("ARCHIVE_FOLDER")
+RESET_TRANSCRIPTION = os.getenv("RESET_TRANSCRIPTION", "False") == "True"
+RESET_EXTRACT_AUDIO = os.getenv("RESET_EXTRACT_AUDIO", "False") == "True"
+RESET_SUMMARY = os.getenv("RESET_SUMMARY", "False") == "True"
+OUTPUT_FOLDER = os.getenv("OUTPUT_FOLDER", "./output")
+ARCHIVE_FOLDER = os.getenv("ARCHIVE_FOLDER", "./archive")
+
+audio_file_path = os.path.join(OUTPUT_FOLDER, "audio.wav")
+transcription_file_path = os.path.join(OUTPUT_FOLDER, "transcription.txt")
+summary_file_path = os.path.join(OUTPUT_FOLDER, "summary.txt")
+
+# Print the current settings
+print("Current settings:")
+print(f"RESET_TRANSCRIPTION: {RESET_TRANSCRIPTION}")
+print(f"RESET_EXTRACT_AUDIO: {RESET_EXTRACT_AUDIO}")
+print(f"RESET_SUMMARY: {RESET_SUMMARY}")
 
 # If Reset Extract audio is true, delete the audio file and all chunks if they exist
 if RESET_EXTRACT_AUDIO:
-    if os.path.exists("audio.wav"):
-        os.remove("audio.wav")
-    for f in os.listdir("."):
+    print("Deleting audio file and chunks...")
+    if os.path.exists(audio_file_path):
+        os.remove(audio_file_path)
+    for f in os.listdir(OUTPUT_FOLDER):
         if f.startswith("chunk_"):
-            os.remove(f)
+            os.remove(os.path.join(OUTPUT_FOLDER, f))
 
-# If reset transcription is true, move the transcription file to the archive folder if it exists. Create folder if it doesn't exist
-if RESET_TRASNSCRIPTION:
-    if os.path.exists("transcription.txt"):
-        if not os.path.exists(ARCHIVE_FOLDER):
-            os.mkdir(ARCHIVE_FOLDER)
-        # Archive the transcription file and append a timestamp to the file name
-        os.rename("transcription.txt", os.path.join(ARCHIVE_FOLDER, f"transcription_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"))
+# If reset transcription is true, move the transcription file to the archive folder if it exists.
+if RESET_TRANSCRIPTION and os.path.exists(transcription_file_path):
+    print("Moving transcription file...")
+    if not os.path.exists(ARCHIVE_FOLDER):
+        os.makedirs(ARCHIVE_FOLDER)
+    os.rename(transcription_file_path, os.path.join(ARCHIVE_FOLDER, f"transcription_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"))
 
-# If reset summary is true, move the summary file to the archive folder if it exists. Create folder if it doesn't exist
-if RESET_SUMMARY:
-    if os.path.exists("summary.txt"):
-        if not os.path.exists(ARCHIVE_FOLDER):
-            os.mkdir(ARCHIVE_FOLDER)
-        # Archive the summary file and append a timestamp to the file name
-        os.rename("summary.txt", os.path.join(ARCHIVE_FOLDER, f"summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"))
+# If reset summary is true, move the summary file to the archive folder if it exists.
+if RESET_SUMMARY and os.path.exists(summary_file_path):
+    print("Moving summary file...")
+    if not os.path.exists(ARCHIVE_FOLDER):
+        os.makedirs(ARCHIVE_FOLDER)
+    os.rename(summary_file_path, os.path.join(ARCHIVE_FOLDER, f"summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"))
 
 
 # Function to extract audio from video using ffmpeg
-def extract_audio(video_path, audio_path="audio.wav"):
+def extract_audio(video_path, audio_path=audio_file_path):
     subprocess.run(
         ["ffmpeg", "-i", video_path, "-q:a", "0", "-map", "a", audio_path, "-y"]
     )
     return audio_path
-
-
-# Function to transcribe audio using Whisper
-# def transcribe_audio(audio_path):
-#     # raise Exception("The 'openai.api_key' option isn't read in the client API. You will need to pass it when you instantiate the client, e.g. 'OpenAI(api_key=os.getenv("OPENAI_API_KEY"))'")
-#     audio_file = open(audio_path, "rb")
-#     transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
-#     return transcript.text
 
 def transcribe_audio(audio_path):
     chunks = split_audio(audio_path)
@@ -118,7 +118,8 @@ def transcribe_audio_chunks(chunks):
     sorted_chunks = sorted(chunks, key=lambda x: int(x.split('_')[1].split('.')[0]))
     combined_transcription = ""
     for i, chunk in enumerate(sorted_chunks, 1):
-        print(f"Transcribing chunk {i}/{len(sorted_chunks)}: {chunk}")
+        # Print the current chunk being transcribed and the time
+        print(f"Transcribing chunk {i}/{len(sorted_chunks)}: {chunk} at {datetime.now().strftime('%H:%M:%S')}")
         with open(chunk, "rb") as audio_file:
             transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
             combined_transcription += transcript.text + " "
@@ -130,23 +131,23 @@ video_path = os.getenv("VIDEO_PATH")
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # Step 1: Extract Audio if audio file doesn't exist. If it does exist, skip this step and load the file
-if not os.path.exists("audio.wav") or RESET_EXTRACT_AUDIO:
+if not os.path.exists(audio_file_path) or RESET_EXTRACT_AUDIO:
     audio_path = extract_audio(video_path)
 else:
-    audio_path = "audio.wav"
+    audio_path = audio_file_path
 
 # # Step 2: Transcribe Audio if transcription file doesn't exist. If it does exist, skip this step and load the file
-if not os.path.exists("transcription.txt") or RESET_TRASNSCRIPTION:
+if not os.path.exists(transcription_file_path) or RESET_TRANSCRIPTION:
     print("Transcribing audio...")
     transcription = transcribe_audio(audio_path)
     print(f'Transcription complete {len(transcription)}')
     #  Save the transcription into a text document
-    with open("transcription.txt", "w") as f:
+    with open(transcription_file_path, "w") as f:
         f.write(transcription)
 else:
     # Load the transcription from a text document
     print("Loading transcription from file...")
-    with open("transcription.txt", "r") as f:
+    with open(transcription_file_path, "r") as f:
         transcription = f.read()
 
 print("Transcription:", transcription)
@@ -158,7 +159,7 @@ summary = summarize_text(transcription)
 print(f'Summary complete {len(summary)}')
 
 # Save the summary into a text document
-with open("summary.txt", "w") as f:
+with open(summary_file_path, "w") as f:
      f.write(summary)
 
 print("Summary:", summary)
