@@ -26,6 +26,7 @@ print("Current settings:")
 print(f"RESET_TRANSCRIPTION: {RESET_TRANSCRIPTION}")
 print(f"RESET_EXTRACT_AUDIO: {RESET_EXTRACT_AUDIO}")
 print(f"RESET_SUMMARY: {RESET_SUMMARY}")
+print(f"VIDEO_PATH: {os.getenv('VIDEO_PATH')}")
 
 # If Reset Extract audio is true, delete the audio file and all chunks if they exist
 if RESET_EXTRACT_AUDIO:
