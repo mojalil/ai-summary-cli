@@ -3,6 +3,7 @@ import subprocess
 import math
 from openai import OpenAI
 from datetime import datetime
+from transcribe import transcribe
 
 # Load .env file
 from dotenv import load_dotenv
@@ -113,7 +114,7 @@ def split_audio(audio_path, max_size_mb=24):  # Set just under the 25MB limit to
     return chunks
 
 # Function to transcribe audio chunks
-def transcribe_audio_chunks(chunks):
+def transcribe_audio_chunks(chunks, local=True):
     print("Transcribing audio chunks...")
     # Sort the chunk files to maintain the correct order
     sorted_chunks = sorted(chunks, key=lambda x: int(x.split('_')[1].split('.')[0]))
@@ -121,9 +122,17 @@ def transcribe_audio_chunks(chunks):
     for i, chunk in enumerate(sorted_chunks, 1):
         # Print the current chunk being transcribed and the time
         print(f"Transcribing chunk {i}/{len(sorted_chunks)}: {chunk} at {datetime.now().strftime('%H:%M:%S')}")
-        with open(chunk, "rb") as audio_file:
-            transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
-            combined_transcription += transcript.text + " "
+
+        # transcribe locally
+        if local:
+            transcript = transcribe(chunk)
+            print(f"Transcription complete: {len(transcript)}")
+            combined_transcription += transcript
+        # transcribe using OpenAI
+        else:
+            with open(chunk, "rb") as audio_file:
+                transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
+                combined_transcription += transcript.text + " "
     return combined_transcription.strip()
 
 # Get video path from .env file
