@@ -68,6 +68,10 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduc
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
 
+## Errors
+
+If you get `cannot import name ‘OpenAI’ from ‘openai` [Source](https://community.openai.com/t/cannot-import-name-openai-from-openai/486147). Run `pip install openai --upgrade`
+
 ## Acknowledgments
 
 - OpenAI team for providing the API for Whisper and GPT-3.5 models.

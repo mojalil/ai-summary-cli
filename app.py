@@ -17,6 +17,7 @@ RESET_EXTRACT_AUDIO = os.getenv("RESET_EXTRACT_AUDIO", "False") == "True"
 RESET_SUMMARY = os.getenv("RESET_SUMMARY", "False") == "True"
 OUTPUT_FOLDER = os.getenv("OUTPUT_FOLDER", "./output")
 ARCHIVE_FOLDER = os.getenv("ARCHIVE_FOLDER", "./archive")
+LOCAL_MODE = os.getenv("LOCAL_MODE", "False") == "True"
 
 audio_file_path = os.path.join(OUTPUT_FOLDER, "audio.wav")
 transcription_file_path = os.path.join(OUTPUT_FOLDER, "transcription.txt")
@@ -65,12 +66,12 @@ def transcribe_audio(audio_path):
     transcription = transcribe_audio_chunks(chunks)
     return transcription
 
-# Function to summarize text using OpenAI
-def summarize_text(text):
+# Function to summarize text using OpenAI. Add optional context variable to add context to the text
+def summarize_text(text, context=""):
     print("Summarizing text...")
     response = client.chat.completions.create(
         model="gpt-3.5-turbo-1106",
-        messages=[{"role": "system", "content": "You are a professional blogger and author. For long conversations You are to create a very detailed summary that is at least 2 pages long of the conversation and must include names, people, places , tools, organisations and any important sound bytes. The final piece should be in markdown format and have headings, sub headings, conclusio, sentiment  and finally next steps. Here is a detailed format ##Introduction ##Topics ##Key Points ##Conclusion  ##Sentiment ##All Questions Asked ##Next Steps"}, 
+        messages=[{"role": "system", "content": "You are a professional blogger and author. For long conversations You are to create a very detailed summary that is at least 2 pages long of the conversation and must include names, people, places , tools, organisations and any important sound bytes. The final piece should be in markdown format and have headings, sub headings, conclusion, sentiment  and finally next steps. Here is a detailed format ##Introduction ##Topics ##Key Points ##Conclusion  ##Sentiment ##All Questions Asked ##Next Steps" + context}, 
                   {"role": "user", "content": text}],
     )
     return response.choices[0].message.content
@@ -114,7 +115,8 @@ def split_audio(audio_path, max_size_mb=24):  # Set just under the 25MB limit to
     return chunks
 
 # Function to transcribe audio chunks
-def transcribe_audio_chunks(chunks, local=True):
+def transcribe_audio_chunks(chunks, local=LOCAL_MODE):
+    print(f"Transcribing audio chunks locally: {local}")
     print("Transcribing audio chunks...")
     # Sort the chunk files to maintain the correct order
     sorted_chunks = sorted(chunks, key=lambda x: int(x.split('_')[1].split('.')[0]))
