@@ -41,10 +41,15 @@ pip install -r requirements.txt
 ```plaintext
 OPENAI_API_KEY='your_openai_api_key'
 VIDEO_PATH='/path_to_video_file.mp4'
-# Optional settings
-RESET_TRANSCRIPTION=False
-RESET_EXTRACT_AUDIO=False
 OUTPUT_FOLDER='./output'
+ARCHIVE_FOLDER=archive
+
+
+# Optional settings
+RESET_EXTRACT_AUDIO=True
+RESET_TRANSCRIPTION=True
+RESET_SUMMARY=True
+LOCAL_MODE=False
 ```
 
 ### Usage
